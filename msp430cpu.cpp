@@ -28,7 +28,7 @@ void MSP430Cpu::loadBinRom(const char* const rom_data, long data_size)
 uint16_t MSP430Cpu::loadNextInstruction()
 {
 	const uint16_t code = *reinterpret_cast<const uint16_t*>(&m_rom[pc]);
-	pc += 2;
+	addPC(2);
 	if (pc > program_size) {
 		cout << "Program Finished !" << endl;
 		exit(0);
@@ -127,6 +127,39 @@ void MSP430Cpu::RRC(uint16_t code)
 
 void MSP430Cpu::SWPB(uint16_t code)
 {
+	uint8_t dst_reg = code & 0x000f;
+	uint8_t ad = (code & 0x0030) >> 4;
+
+	if (ad == 0) { // Register Mode
+		uint16_t dst_data = reg[dst_reg];
+		uint16_t low_byte = dst_data & 0xff;
+		uint16_t high_byte = (dst_data >> 8) & 0xff;
+		reg[dst_reg] = (low_byte << 8) + high_byte;
+
+		cout << "swpb r" + to_string(dst_reg) << endl;
+	} else if (ad == 1) {
+		uint16_t dst_data_base = reg[dst_reg];
+		uint16_t dst_data_offset = *reinterpret_cast<const uint16_t *>(&m_rom[pc]);
+		addPC(2);
+		uint16_t dst_data_address = dst_data_base + dst_data_offset;
+
+		uint16_t dst_data = m_ram.get()[dst_data_address];
+		uint16_t low_byte = dst_data & 0xff;
+		uint16_t high_byte = (dst_data >> 8) & 0xff;
+		m_ram.get()[dst_data_address] = (low_byte << 8) + high_byte;
+
+		cout << "swpb " + to_string(dst_data_offset) +
+				"(r" + to_string(dst_reg) + ")" << endl;
+	} else if (ad == 2) {
+		uint16_t dst_data_address = reg[dst_reg];
+		uint16_t dst_data = m_ram.get()[dst_data_address];
+		uint16_t low_byte = dst_data & 0xff;
+		uint16_t high_byte = (dst_data >> 8) & 0xff;
+		m_ram.get()[dst_data_address] = (low_byte << 8) + high_byte;
+
+		cout << "swpb @r" + to_string(dst_reg) << endl;
+
+	}
 	cout << "swpb " << endl;
 }
 
@@ -136,18 +169,176 @@ void MSP430Cpu::RRA(uint16_t code)
 }
 void MSP430Cpu::SXT(uint16_t code)
 {
-	cout << "sxt " << endl;
+	uint8_t dst_reg = code & 0x000f;
+	uint8_t ad = (code & 0x0030) >> 4;
+
+	if (ad == 0) { // Register Mode
+		if (reg[dst_reg] & 0x80) {
+			reg[dst_reg] |= 0xff00;
+			sr->N = 1;
+		} else {
+			reg[dst_reg] |= 0x0000;
+			sr->N = 0;
+		}
+		sr->Z = !reg[dst_reg];
+
+		cout << "sxt r" + to_string(dst_reg) << endl;
+	} else if (ad == 1) { // Indexed mode Symbolic Mode Absolute Mode
+		uint16_t dst_data_base = reg[dst_reg];
+		uint16_t dst_data_offset = *reinterpret_cast<const uint16_t*>(&m_rom[pc]);
+		addPC(2);
+
+		uint16_t dst_data_address = dst_data_base + dst_data_offset;
+
+		uint16_t dst_data = m_ram.get()[dst_data_address];
+		if (dst_data & 0x80) {
+			dst_data |= 0xff00;
+			sr->N = 1;
+		} else {
+			dst_data |= 0x0000;
+			sr->N = 0;
+		}
+		sr->Z = !dst_data;
+		m_ram.get()[dst_data_address] = dst_data;
+
+		cout << "sxt " + to_string(dst_data_offset) +
+				"(r" + to_string(dst_reg) + ")" << endl;
+	} else if (ad == 2) { // Absolute Mode
+		uint16_t dst_data_address = reg[dst_reg];
+		uint16_t dst_data = m_ram.get()[dst_data_address];
+		if (dst_data & 0x80) {
+			dst_data |= 0xff00;
+			sr->N = 1;
+		} else {
+			dst_data |= 0x0000;
+			sr->N = 0;
+		}
+		sr->Z = !dst_data;
+		m_ram.get()[dst_data_address] = dst_data;
+
+		cout << "sxt @r" + to_string(dst_reg) << endl;
+	}
+
+	sr->C = !sr->Z;
+	sr->V = 0;
 }
 void MSP430Cpu::PUSH(uint16_t code)
 {
-	cout << "push " << endl;
+	sp -= 2;
+	uint8_t src_reg = code &0x000f;
+	uint8_t ad = (code & 0x0030) >> 4;
+	uint8_t b_w = (code & 0x0040) >> 5;
+
+	uint16_t src_data = 0;
+	if (ad == 0) { // Register Mode
+		if (b_w) {
+			src_data = reg[src_reg] & 0xff;
+			cout << "push.b r" + to_string(src_reg) << endl;
+		} else {
+			src_data = reg[src_reg];
+			cout << "push r" + to_string(src_reg) << endl;
+		}
+	} else if (ad == 1) { // Indexed mode Symbolic mode Absolute mode
+		uint16_t src_data_base = reg[src_reg];
+
+		uint16_t src_data_offset = *reinterpret_cast<const uint16_t*>(&m_rom[pc]);
+		addPC(2);
+
+		uint16_t src_data_address = src_data_base + src_data_offset;
+
+		if (b_w) {
+			src_data = m_ram.get()[src_data_address] & 0xff;
+		} else {
+			src_data = m_ram.get()[src_data_address];
+		}
+
+		if (src_reg == 0) {	// Symbolic Mode
+			cout << (b_w ? "push.b " : "pusb ") + to_string(src_data_address) << endl;
+		} else if (src_reg == 2) {
+			cout << (b_w ? "push.b &" : "pusb &") + to_string(src_data_address) << endl;
+		} else {
+			cout << (b_w ? "push.b " : "pusb ") + to_string(src_data_offset) +
+					"(r" + to_string(src_reg) + ")" << endl;
+		}
+	} else if (ad == 2) {
+		uint16_t src_data_address = reg[src_reg];
+		src_data = m_ram.get()[src_data_address];
+		cout << (b_w ? "push.b @r" : "pusb @r") + to_string(src_reg) << endl;
+	}
+
+	m_ram.get()[sp] = src_data;
 }
 void MSP430Cpu::CALL(uint16_t code)
 {
-	cout << "call " << endl;
+	uint8_t dst_reg = code & 0x000f;
+	uint8_t ad = (code & 0x0030) >> 4;
+
+	if (ad == 0) {
+		uint16_t call_address = reg[dst_reg];
+		if (dst_reg == 3) {
+			call_address = 0;
+			cout << "call #0" << endl;
+		} else {
+			cout << "call r" << to_string(dst_reg) << endl;
+		}
+		sp-= 2;
+		m_ram.get()[sp] = pc;
+		setPC(call_address);
+	} else if (ad == 1) {
+		uint16_t call_address = 0;
+		if (dst_reg != 3) {
+			uint16_t dst_addr_base = reg[dst_reg];
+			uint16_t dst_addr_offset = *reinterpret_cast<const uint16_t*>(&m_rom[pc]);
+			addPC(2);
+			call_address = dst_addr_base + dst_addr_base;
+			cout << "call " + to_string(dst_addr_offset) +
+					"(r" + to_string(dst_reg) + ")" << endl;
+		} else {
+			call_address = 1;
+			cout << "call #1" << endl;
+		}
+		sp-= 2;
+		m_ram.get()[sp] = pc;
+		setPC(call_address);
+	} else if (ad == 2) {
+		uint16_t call_address = 0;
+		if ((dst_reg != 2) && (dst_reg != 3)) {
+			uint16_t dst_addr = reg[dst_reg];
+			call_address = m_ram.get()[dst_addr];
+			cout << "call @r" << to_string(dst_reg) << endl;
+		} else {
+			if (dst_reg == 2) {
+				call_address = 0x0004;
+				cout << "call #4" << endl;
+			}
+			if (dst_reg == 3) {
+				call_address = 0x0002;
+				cout << "call #2" << endl;
+			}
+		}
+		sp -= 2;
+		m_ram.get()[sp] = pc;
+		setPC(call_address);
+	} else if (ad == 3) {
+		uint16_t call_address = 0;
+		if (dst_reg == 2) {
+			call_address = 0x0008;
+			cout << "call #8" << endl;
+		}
+
+		sp -= 2;
+		m_ram.get()[sp] = pc;
+		setPC(call_address);
+	}
 }
 void MSP430Cpu::RETI(uint16_t code)
 {
+	uint16_t tos = m_ram.get()[sp];
+	reg[2] = tos; // sr = tos;
+	addSP(2);
+	tos = m_ram.get()[sp];
+	setPC(tos);
+	addSP(2);
 	cout << "reti " << endl;
 }
 
@@ -158,7 +349,7 @@ void MSP430Cpu::JNE(uint16_t code)
 		offset |= 0xfc00;
 	}
 	if (!sr->Z) {
-		pc += (offset << 1);
+		addPC(offset << 1);
 	}
 
 	cout << "jne $" + to_string(offset)  << endl;
@@ -171,7 +362,7 @@ void MSP430Cpu::JEQ(uint16_t code)
 		offset |= 0xfc00;
 	}
 	if (sr->Z) {
-		pc += (offset << 1);
+		addPC(offset << 1);
 	}
 
 	cout << "jeq $" + to_string(offset)  << endl;
@@ -184,7 +375,7 @@ void MSP430Cpu::JNC(uint16_t code)
 		offset |= 0xfc00;
 	}
 	if (!sr->C) {
-		pc += (offset << 1);
+		addPC (offset << 1);
 	}
 
 	cout << "jnc $" + to_string(offset)  << endl;
@@ -197,7 +388,7 @@ void MSP430Cpu::JC(uint16_t code)
 		offset |= 0xfc00;
 	}
 	if (sr->C) {
-		pc += (offset << 1);
+		addPC (offset << 1);
 	}
 
 	cout << "jc $" + to_string(offset)  << endl;
@@ -210,7 +401,7 @@ void MSP430Cpu::JN(uint16_t code)
 		offset |= 0xfc00;
 	}
 	if (sr->N) {
-		pc += (offset << 1);
+		addPC (offset << 1);
 	}
 
 	cout << "jn $" + to_string(offset)  << endl;
@@ -223,7 +414,7 @@ void MSP430Cpu::JGE(uint16_t code)
 		offset |= 0xfc00;
 	}
 	if (!(sr->N ^ sr->V)) {
-		pc += (offset << 1);
+		addPC (offset << 1);
 	}
 
 	cout << "jge $" + to_string(offset)  << endl;
@@ -236,10 +427,30 @@ void MSP430Cpu::JL(uint16_t code)
 		offset |= 0xfc00;
 	}
 	if ((sr->N ^ sr->V)) {
-		pc +=  (offset << 1);
+		addPC  (offset << 1);
 	}
 
 	cout << "jl $" + to_string(offset)  << endl;
+}
+
+void MSP430Cpu::setPC(uint16_t pc_val)
+{
+	pc = pc_val & 0xfffe;
+}
+
+void MSP430Cpu::setSP(uint16_t sp_val)
+{
+	sp = sp_val & 0xfffe;
+}
+
+void MSP430Cpu::addPC(uint16_t add_val)
+{
+	pc +=  (add_val & 0xfffe);
+}
+
+void MSP430Cpu::addSP(uint16_t add_val)
+{
+	sp += (add_val & 0xfffe);
 }
 
 void MSP430Cpu::JMP(uint16_t code)
@@ -248,7 +459,7 @@ void MSP430Cpu::JMP(uint16_t code)
 	if (offset & 0x200) {
 		offset |= 0xfc00;
 	}
-	pc += (offset << 1);
+	addPC (offset << 1);
 	cout << "jmp $" + to_string(offset)  << endl;
 }
 
@@ -278,7 +489,7 @@ void MSP430Cpu::MOV(uint16_t code)
 		}
 	} else if (as == 1) { // Index mode or Symbolic mode or Absolute mode
 		int16_t src_data_offset = *(reinterpret_cast<const int16_t*>(&m_rom[pc]));
-
+		addPC(2);
 		uint16_t src_base_addr = 0;
 		uint16_t src_data_addr = 0;
 		if ((src_reg != 2) && (src_reg != 3)) {
@@ -287,7 +498,8 @@ void MSP430Cpu::MOV(uint16_t code)
 			src_data_addr = src_base_addr + src_data_offset;
 
 			if (src_reg != 0) {
-				disasm += to_string(src_data_offset) + "(r" + to_string(src_reg) + "), ";
+				disasm += to_string(src_data_offset) +
+						"(r" + to_string(src_reg) + "), ";
 			} else {   // offset(PC)
 				disasm += to_string(src_data_addr) + ", ";
 			}
@@ -306,7 +518,6 @@ void MSP430Cpu::MOV(uint16_t code)
 			disasm += "&" + to_string(src_data_addr) + ", ";
 		}
 		src_data = m_ram.get()[src_data_addr];
-		pc += 2;
 	} else if (as == 2) { // Indirect register mode
 		uint16_t src_data_addr = 0;
 		if ((src_reg != 2) && (src_reg != 3)) {
@@ -336,12 +547,12 @@ void MSP430Cpu::MOV(uint16_t code)
 			disasm += "@r" + to_string(src_reg) + "+, ";
 		} else {			// Immediate mode
 			src_data = *(reinterpret_cast<const int16_t*>(&m_rom[pc]));
+			addPC(2);
 			disasm += "#" + to_string(src_data) + ", ";
 		}
-		pc += 2;
 	}
 
-	// Destination Opt Addressing Mode
+	// Destination Operand Addressing Mode
 	if (ad == 0) { // Register mode
 		if (b_w) {
 			reg[dst_reg] = src_data & 0xff;
@@ -351,7 +562,7 @@ void MSP430Cpu::MOV(uint16_t code)
 		disasm += "r" + to_string(dst_reg);
 	} else if (ad == 1) { // Index mode or Symbolic mode or Absolute mode
 		int16_t dst_data_offset = *(reinterpret_cast<const int16_t*>(&m_rom[pc]));
-
+		addPC(2);
 		uint16_t  dst_base_addr = 0;
 
 		if ((dst_reg != 2) && (dst_reg != 3)) {
@@ -378,8 +589,6 @@ void MSP430Cpu::MOV(uint16_t code)
 
 		uint16_t dst_data_addr = dst_base_addr + dst_data_offset;
 
-		pc += 2;
-
 		if (b_w) {
 			m_ram.get()[dst_data_addr] = src_data & 0xff;
 		} else {
@@ -390,7 +599,8 @@ void MSP430Cpu::MOV(uint16_t code)
 			disasm += "&" + to_string(dst_data_addr);
 		} else {
 			if (dst_reg != 0) { // Indexed Mode
-				disasm += to_string(dst_data_offset) + "(r" + to_string(dst_reg) + ")";
+				disasm += to_string(dst_data_offset) +
+						"(r" + to_string(dst_reg) + ")";
 			} else { 		// Y(PC) Symbolic Mode
 				disasm += to_string(dst_data_addr);
 			}
@@ -459,4 +669,3 @@ void MSP430Cpu::setStepRun(bool stepRun)
 {
 	step_run = stepRun;
 }
-

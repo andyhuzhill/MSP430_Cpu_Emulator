@@ -72,23 +72,28 @@ private:
 	long  program_size = 0;
 	bool  step_run = false;
 
+	void setPC(uint16_t pc_val);
+	void addPC(uint16_t add_val);
+	void setSP(uint16_t sp_val);
+	void addSP(uint16_t add_val);
+
 	// Double-Operand(Format I) Instructions
 	void MOV(uint16_t code);
-	void ADD(uint16_t code);
-	void ADDC(uint16_t code);
-	void SUB(uint16_t code);
-	void SUBC(uint16_t code);
-	void CMP(uint16_t code);
-	void DADD(uint16_t code);
-	void BIT(uint16_t code);
-	void BIC(uint16_t code);
-	void BIS(uint16_t code);
-	void XOR(uint16_t code);
-	void AND(uint16_t code);
+	void ADD(uint16_t code);  // TODO
+	void ADDC(uint16_t code); // TODO
+	void SUB(uint16_t code);  // TODO
+	void SUBC(uint16_t code); // TODO
+	void CMP(uint16_t code);  // TODO
+ 	void DADD(uint16_t code); // TODO
+	void BIT(uint16_t code);  // TODO
+	void BIC(uint16_t code);  // TODO
+	void BIS(uint16_t code);  // TODO
+	void XOR(uint16_t code);  // TODO
+	void AND(uint16_t code);  // TODO
 
 	// Single-Operand(Format II) Instructions
-	void RRC(uint16_t code);
-	void RRA(uint16_t code);
+	void RRC(uint16_t code);  // TODO
+	void RRA(uint16_t code);  // TODO
 	void PUSH(uint16_t code);
 	void SWPB(uint16_t code);
 	void CALL(uint16_t code);

@@ -3,6 +3,7 @@
 	.equ TONI,  0x1114
 start:
 .L2:
+	mov #0x1000, r1
 	mov #0x3517, r11
 	mov r11, r5
 	mov 2(r5), 6(r6)
@@ -16,5 +17,29 @@ start:
 	
 	mov EDE, TONI
 	mov &EDE, &TONI
+	
+	push r7
+	
+	push @r7
+	
+	push &EDE
+	
+	push EDE
+
+	mov #0x0080, r7
+		
+	sxt  r7
+	
+	mov #0x2373, @r7
+	
+	sxt  @r7
+	
+	mov #0x0004, r7
+	
+	mov #0x0008, @r7
+	
+	call 4(r7)
+	
+	
      
     .end
