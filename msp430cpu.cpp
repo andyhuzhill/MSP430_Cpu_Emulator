@@ -267,47 +267,134 @@ void MSP430Cpu::MOV(uint16_t code)
 		disasm += " ";
 	}
 
-	if ((as == 0) && (ad == 0)) {  // Register mode
-		if (b_w) {
-			reg[dst_reg] = (reg[dst_reg] & 0xff00) + (reg[src_reg] & 0xff);
-		} else {
-			reg[dst_reg] = reg[src_reg];
+	int16_t src_data = 0;
+	if (as == 0) { // Register mode
+		if (src_reg != 3) {
+			src_data = reg[src_reg];
+			disasm += "r" + to_string(src_reg) + ", ";
+		} else {  // when as == 0, r3 is constant 0
+			src_data = 0;
+			disasm += "#0, ";
+		}
+	} else if (as == 1) { // Index mode or Symbolic mode or Absolute mode
+		int16_t src_data_offset = *(reinterpret_cast<const int16_t*>(&m_rom[pc]));
+
+		uint16_t src_base_addr = 0;
+		uint16_t src_data_addr = 0;
+		if ((src_reg != 2) && (src_reg != 3)) {
+			src_base_addr = reg[src_reg];
+
+			src_data_addr = src_base_addr + src_data_offset;
+
+			if (src_reg != 0) {
+				disasm += to_string(src_data_offset) + "(r" + to_string(src_reg) + "), ";
+			} else {   // offset(PC)
+				disasm += to_string(src_data_addr) + ", ";
+			}
+		} else if (src_reg == 2) { 		// when as == 1, r2 is constant 0
+			src_base_addr = 0;
+
+			src_data_addr = src_base_addr + src_data_offset;
+
+			disasm += "&" + to_string(src_data_addr) + ", ";
+
+		} else if (src_reg == 3) {		// when as == 1, r3 is  constant 1
+			src_base_addr = 1;
+
+			src_data_addr = src_base_addr + src_data_offset;
+
+			disasm += "&" + to_string(src_data_addr) + ", ";
+		}
+		src_data = m_ram.get()[src_data_addr];
+		pc += 2;
+	} else if (as == 2) { // Indirect register mode
+		uint16_t src_data_addr = 0;
+		if ((src_reg != 2) && (src_reg != 3)) {
+			src_data_addr = reg[src_reg];
+		} else if (src_reg == 2) {	// when as == 2, r2 is constant 0x0004
+			src_data_addr = 0x0004;
+		} else if (src_reg == 3) {  // when as == 2, r3 is constant 0x0002
+			src_data_addr = 0x0002;
 		}
 
-		disasm += "r" + to_string(src_reg) + ", ";
+		src_data = m_ram.get()[src_data_addr];
+
+		disasm += "@r" + to_string(src_reg) + ", ";
+	} else if (as == 3) { // Indirect autoincrement mode or Immediate mode
+		if (src_reg != 0) { // Indirect autoincrement mode
+			uint16_t src_data_addr = 0;
+			if ((src_reg != 2) && (src_reg != 3)) {
+				src_data_addr = reg[src_reg];
+				reg[src_reg] += (b_w ? 1 : 2);
+			} else if (src_reg == 2) {	// when as == 3, r2 is constant 0x0008
+				src_data_addr = 0x0008;
+			} else if (src_reg == 3) {	// when as == 3, r3 is constant 0xffff
+				src_data_addr = 0xffff;
+			}
+			src_data = m_ram.get()[src_data_addr];
+
+			disasm += "@r" + to_string(src_reg) + "+, ";
+		} else {			// Immediate mode
+			src_data = *(reinterpret_cast<const int16_t*>(&m_rom[pc]));
+			disasm += "#" + to_string(src_data) + ", ";
+		}
+		pc += 2;
+	}
+
+	// Destination Opt Addressing Mode
+	if (ad == 0) { // Register mode
+		if (b_w) {
+			reg[dst_reg] = src_data & 0xff;
+		} else {
+			reg[dst_reg] = src_data;
+		}
 		disasm += "r" + to_string(dst_reg);
-	} else if ((as == 1) && (ad == 1)) { // Indexed Mode && Symbolic mode && Absolute mode
-		uint16_t x = *(reinterpret_cast<const uint16_t*>(&m_rom[pc]));
+	} else if (ad == 1) { // Index mode or Symbolic mode or Absolute mode
+		int16_t dst_data_offset = *(reinterpret_cast<const int16_t*>(&m_rom[pc]));
+
+		uint16_t  dst_base_addr = 0;
+
+		if ((dst_reg != 2) && (dst_reg != 3)) {
+			dst_base_addr = reg[dst_reg];
+		} else {
+			if ((dst_reg == 2) && (as == 0)) {
+				dst_base_addr = reg[dst_reg];
+			} else if ((dst_reg == 2) && (as == 1)) {  // Absolute Mode
+				dst_base_addr = 0x0000;
+			} else if ((dst_reg == 2) && (as == 2)) {
+				dst_base_addr = 0x0004;
+			} else if ((dst_reg == 2) && (as == 3)) {
+				dst_base_addr = 0x0008;
+			} else if ((dst_reg == 3) && (as == 0)) {
+				dst_base_addr = 0x0000;
+			} else if ((dst_reg == 3) && (as == 1)) {
+				dst_base_addr = 0x0001;
+			} else if ((dst_reg == 3) && (as == 2)) {
+				dst_base_addr = 0x0002;
+			} else if ((dst_reg == 3) && (as == 3)) {
+				dst_base_addr = 0xffff;
+			}
+		}
+
+		uint16_t dst_data_addr = dst_base_addr + dst_data_offset;
+
 		pc += 2;
-		uint16_t y = *(reinterpret_cast<const uint16_t*>(&m_rom[pc]));
-
-		uint16_t src_base_addr = reg[src_reg];
-		uint16_t dst_base_addr = reg[dst_reg];
-
-		uint16_t src_addr = src_base_addr + x;
-		uint16_t dst_addr = dst_base_addr + y;
 
 		if (b_w) {
-			m_ram.get()[dst_addr] = (m_ram.get()[dst_addr] & 0xff00) + (m_ram.get()[src_addr] & 0xff);
+			m_ram.get()[dst_data_addr] = src_data & 0xff;
 		} else {
-			m_ram.get()[dst_addr] = m_ram.get()[src_addr];
-		}
-		pc += 2;
-	} else if (as == 2 /* 0b10 */) { //　Indirect register mode && Indrect autoincrement
-
-	} else if (as == 3 /* 0b11 */) { // Immediate mode
-		uint16_t x = *(reinterpret_cast<const uint16_t*>(&m_rom[pc]));
-
-		if (b_w) {
-			reg[dst_reg] = (reg[dst_reg] & 0xff00) + (x & 0xff);
-		} else {
-			reg[dst_reg] = x;
+			m_ram.get()[dst_data_addr] = src_data;
 		}
 
-		disasm += "#" + to_string(x) + ", r" + to_string(dst_reg);
-		pc += 2;
-	} else {
-		cout << "Unknown addressing mode!" << endl;
+		if ((dst_reg == 2) && (as == 1)) { // Absolute Mode
+			disasm += "&" + to_string(dst_data_addr);
+		} else {
+			if (dst_reg != 0) { // Indexed Mode
+				disasm += to_string(dst_data_offset) + "(r" + to_string(dst_reg) + ")";
+			} else { 		// Y(PC) Symbolic Mode
+				disasm += to_string(dst_data_addr);
+			}
+		}
 	}
 
 	cout << disasm << endl;
@@ -367,3 +454,9 @@ void MSP430Cpu::AND(uint16_t code)
 {
 	cout << "and " << endl;
 }
+
+void MSP430Cpu::setStepRun(bool stepRun)
+{
+	step_run = stepRun;
+}
+

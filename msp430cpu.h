@@ -45,9 +45,7 @@ public:
 
 	void printRegister(void);
 
-	void setStepRun(bool stepRun = false) {
-		step_run = stepRun;
-	}
+	void setStepRun(bool stepRun);
 
 private:
 	uint16_t reg[16] = {0};

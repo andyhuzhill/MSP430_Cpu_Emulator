@@ -1,19 +1,20 @@
 
+	.equ EDE,   0x3016
+	.equ TONI,  0x1114
 start:
-	 mov   #3228, r11
-     mov.b #65532, r10
-.L1:
-     mov r10, r11
 .L2:
-	 mov r11, r5
-	 setc
-     ;jmp .L2	
-     mov .L1, .L2
-     mov &.L1, &.L2
-    
-     reti
-     call .L2
-     setc
-     setz
+	mov #0x3517, r11
+	mov r11, r5
+	mov 2(r5), 6(r6)
+	mov 2(r5), r11
+	
+	mov #EDE, r7
+	mov #0x1234, @r7
+	
+	mov #TONI, r7
+	mov #0xa55a, @r7
+	
+	mov EDE, TONI
+	mov &EDE, &TONI
      
-     .end
+    .end
