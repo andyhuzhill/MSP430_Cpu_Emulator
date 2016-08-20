@@ -41,7 +41,9 @@ public:
 
 	uint16_t loadInstruction();
 
-	void     translateCode(uint16_t code);
+	void translateCode(uint16_t code);
+
+	void printRegister(void);
 
 private:
 	uint16_t reg[16] = {0};
@@ -70,7 +72,7 @@ private:
 	// Double-Operand(Format I) Instructions
 	void mov(uint16_t code);
 
-	//  Single-Operand(Format II) Instructions
+	// Single-Operand(Format II) Instructions
 
 	// Jumps
 	void jne(uint16_t code);
