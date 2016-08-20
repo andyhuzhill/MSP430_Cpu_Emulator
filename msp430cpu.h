@@ -39,11 +39,15 @@ public:
 
 	void run(void);
 
-	uint16_t loadInstruction();
+	uint16_t loadNextInstruction();
 
 	void translateCode(uint16_t code);
 
 	void printRegister(void);
+
+	void setStepRun(bool stepRun = false) {
+		step_run = stepRun;
+	}
 
 private:
 	uint16_t reg[16] = {0};
@@ -68,21 +72,40 @@ private:
 	shared_ptr<uint8_t> m_ram;
 	const char * m_rom = nullptr;
 	long  program_size = 0;
+	bool  step_run = false;
 
 	// Double-Operand(Format I) Instructions
-	void mov(uint16_t code);
+	void MOV(uint16_t code);
+	void ADD(uint16_t code);
+	void ADDC(uint16_t code);
+	void SUB(uint16_t code);
+	void SUBC(uint16_t code);
+	void CMP(uint16_t code);
+	void DADD(uint16_t code);
+	void BIT(uint16_t code);
+	void BIC(uint16_t code);
+	void BIS(uint16_t code);
+	void XOR(uint16_t code);
+	void AND(uint16_t code);
 
 	// Single-Operand(Format II) Instructions
+	void RRC(uint16_t code);
+	void RRA(uint16_t code);
+	void PUSH(uint16_t code);
+	void SWPB(uint16_t code);
+	void CALL(uint16_t code);
+	void RETI(uint16_t code);
+	void SXT(uint16_t code);
 
 	// Jumps
-	void jne(uint16_t code);
-	void jeq(uint16_t code);
-	void jnc(uint16_t code);
-	void jc(uint16_t code);
-	void jn(uint16_t code);
-	void jge(uint16_t code);
-	void jl(uint16_t code);
-	void jmp(uint16_t code);
+	void JNE(uint16_t code);
+	void JEQ(uint16_t code);
+	void JNC(uint16_t code);
+	void JC(uint16_t code);
+	void JN(uint16_t code);
+	void JGE(uint16_t code);
+	void JL(uint16_t code);
+	void JMP(uint16_t code);
 };
 
 #endif /* MSP430CPU_H_ */

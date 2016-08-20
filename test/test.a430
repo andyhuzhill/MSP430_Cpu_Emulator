@@ -1,0 +1,19 @@
+
+start:
+	 mov   #3228, r11
+     mov.b #65532, r10
+.L1:
+     mov r10, r11
+.L2:
+	 mov r11, r5
+	 setc
+     ;jmp .L2	
+     mov .L1, .L2
+     mov &.L1, &.L2
+    
+     reti
+     call .L2
+     setc
+     setz
+     
+     .end
