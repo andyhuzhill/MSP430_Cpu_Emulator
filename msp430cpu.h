@@ -10,8 +10,11 @@
 
 #include <cstdint>
 #include <memory>
+#include <unordered_map>
 
 using namespace std;
+
+class MSP430Cpu;
 
 #pragma packed(0)
 
@@ -27,6 +30,30 @@ typedef struct {
 	uint8_t Z		: 1;
 	uint8_t C		: 1;
 } StatusRegister;
+
+typedef struct {
+	uint8_t opcode : 4;
+	uint8_t s_reg  : 4;
+	uint8_t Ad     : 1;
+	uint8_t b_w    : 1;
+	uint8_t As	   : 2;
+	uint8_t d_reg  : 4;
+} DoubleOperandInstruction;
+typedef void (MSP430Cpu::*DoubleOperandFunc)(DoubleOperandInstruction);
+
+typedef struct {
+	uint16_t opcode : 9;
+	uint8_t  b_w	: 1;
+	uint16_t Ad 	: 2;
+	uint8_t  s_d_reg: 4;
+} SingleOperandInstruction;
+typedef void (MSP430Cpu::*SingleOperandFunc)(SingleOperandInstruction);
+
+typedef struct {
+	uint8_t  opcode : 6;
+	uint16_t offset : 10;
+} JumpsInstruction;
+typedef void (MSP430Cpu::*JumpsFunc)(JumpsInstruction);
 
 #pragma packed()
 
@@ -78,37 +105,73 @@ private:
 	void addSP(uint16_t add_val);
 
 	// Double-Operand(Format I) Instructions
-	void MOV(uint16_t code);
-	void ADD(uint16_t code);  // TODO
-	void ADDC(uint16_t code); // TODO
-	void SUB(uint16_t code);  // TODO
-	void SUBC(uint16_t code); // TODO
-	void CMP(uint16_t code);  // TODO
- 	void DADD(uint16_t code); // TODO
-	void BIT(uint16_t code);  // TODO
-	void BIC(uint16_t code);  // TODO
-	void BIS(uint16_t code);  // TODO
-	void XOR(uint16_t code);  // TODO
-	void AND(uint16_t code);  // TODO
+	void MOV(DoubleOperandInstruction code);
+	void ADD(DoubleOperandInstruction code);  // TODO
+	void ADDC(DoubleOperandInstruction code); // TODO
+	void SUB(DoubleOperandInstruction code);  // TODO
+	void SUBC(DoubleOperandInstruction code); // TODO
+	void CMP(DoubleOperandInstruction code);  // TODO
+ 	void DADD(DoubleOperandInstruction code); // TODO
+	void BIT(DoubleOperandInstruction code);  // TODO
+	void BIC(DoubleOperandInstruction code);  // TODO
+	void BIS(DoubleOperandInstruction code);  // TODO
+	void XOR(DoubleOperandInstruction code);  // TODO
+	void AND(DoubleOperandInstruction code);  // TODO
+
+	unordered_map<int, DoubleOperandFunc> doubleOperandFunctions = {
+			{0x4, &MSP430Cpu::MOV},
+			{0x5, &MSP430Cpu::ADD},
+			{0x6, &MSP430Cpu::ADDC},
+			{0x7, &MSP430Cpu::SUB},
+			{0x8, &MSP430Cpu::SUBC},
+			{0x9, &MSP430Cpu::CMP},
+			{0xa, &MSP430Cpu::DADD},
+			{0xb, &MSP430Cpu::BIT},
+			{0xc, &MSP430Cpu::BIC},
+			{0xd, &MSP430Cpu::BIS},
+			{0xe, &MSP430Cpu::XOR},
+			{0XF, &MSP430Cpu::AND},
+	};
 
 	// Single-Operand(Format II) Instructions
-	void RRC(uint16_t code);  // TODO
-	void RRA(uint16_t code);  // TODO
-	void PUSH(uint16_t code);
-	void SWPB(uint16_t code);
-	void CALL(uint16_t code);
-	void RETI(uint16_t code);
-	void SXT(uint16_t code);
+	void RRC(SingleOperandInstruction code); // TODO
+	void RRA(SingleOperandInstruction code);  // TODO
+	void PUSH(SingleOperandInstruction code);
+	void SWPB(SingleOperandInstruction code);
+	void CALL(SingleOperandInstruction code);
+	void RETI(SingleOperandInstruction code);
+	void SXT(SingleOperandInstruction code);
+
+	unordered_map<int, SingleOperandFunc> singleOperandFunctions = {
+			{0x20, &MSP430Cpu::RRC},
+			{0x21, &MSP430Cpu::RRA},
+			{0x22, &MSP430Cpu::PUSH},
+			{0x23, &MSP430Cpu::SWPB},
+			{0x24, &MSP430Cpu::CALL},
+			{0x25, &MSP430Cpu::RETI},
+			{0x26, &MSP430Cpu::SXT},
+	};
 
 	// Jumps
-	void JNE(uint16_t code);
-	void JEQ(uint16_t code);
-	void JNC(uint16_t code);
-	void JC(uint16_t code);
-	void JN(uint16_t code);
-	void JGE(uint16_t code);
-	void JL(uint16_t code);
-	void JMP(uint16_t code);
+	void JNE(JumpsInstruction code);
+	void JEQ(JumpsInstruction code);
+	void JNC(JumpsInstruction code);
+	void JC(JumpsInstruction code);
+	void JN(JumpsInstruction code);
+	void JGE(JumpsInstruction code);
+	void JL(JumpsInstruction code);
+	void JMP(JumpsInstruction code);
+
+	unordered_map<int, JumpsFunc> jumpsFunctions = {
+			{0x8, &MSP430Cpu::JNE},
+			{0x9, &MSP430Cpu::JEQ},
+			{0xa, &MSP430Cpu::JNC},
+			{0xb, &MSP430Cpu::JC},
+			{0xc, &MSP430Cpu::JN},
+			{0xd, &MSP430Cpu::JGE},
+			{0xe, &MSP430Cpu::JL},
+			{0xf, &MSP430Cpu::JMP},
+	};
 };
 
 #endif /* MSP430CPU_H_ */
