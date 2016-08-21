@@ -38,17 +38,16 @@ uint16_t MSP430Cpu::loadNextInstruction()
 
 void MSP430Cpu::translateCode(uint16_t val)
 {
-	uint16_t code = ((val & 0xff) << 8) + ((val & 0xff00) >> 8);
 	if ((val >= 0x1000) && (val < 0x3400)) {
-		SingleOperandInstruction singleInstruction = *reinterpret_cast<SingleOperandInstruction*>(&code);
+		SingleOperandInstruction singleInstruction = *reinterpret_cast<SingleOperandInstruction*>(&val);
 		auto function = singleOperandFunctions[singleInstruction.opcode];
 		(this->*function)(singleInstruction);
 	} else if ((val >= 0x2000) && (val < 0x4000)) {
-		JumpsInstruction jumpsInstruction = *reinterpret_cast<JumpsInstruction*>(&code);
+		JumpsInstruction jumpsInstruction = *reinterpret_cast<JumpsInstruction*>(&val);
 		auto function = jumpsFunctions[jumpsInstruction.opcode];
 		(this->*function)(jumpsInstruction);
 	} else if ((val >= 0x4000) && (val < 0xffff)) {
-		DoubleOperandInstruction doubleInstruction = *reinterpret_cast<DoubleOperandInstruction*>(&code);
+		DoubleOperandInstruction doubleInstruction = *reinterpret_cast<DoubleOperandInstruction*>(&val);
 		auto function = doubleOperandFunctions[doubleInstruction.opcode];
 		(this->*function)(doubleInstruction);
 	} else {
@@ -56,66 +55,6 @@ void MSP430Cpu::translateCode(uint16_t val)
 				<< std::hex << pc
 				<< " instruction=0x" << val << endl;
 	}
-
-//	if ((code >= 0x1000) && (code < 0x1080)) {
-//		RRC(code);
-//	} else if ((code >= 0x1080) && (code < 0x10c0)) {
-//		SWPB(code);
-//	} else if ((code >= 0x1100) && (code < 0x1180)) {
-//		RRA(code);
-//	} else if ((code >= 0x1180) && (code < 0x11c0)) {
-//		SXT(code);
-//	} else if ((code >= 0x1200) && (code < 0x1280)) {
-//		PUSH(code);
-//	} else if ((code >= 0x1280) && (code < 0x12c0)) {
-//		CALL(code);
-//	} else if ((code >= 0x1300) && (code < 0x1340)) {
-//		RETI(code);
-//	} else if ((code >= 0x2000) && (code < 0x2400)) {
-//		JNE(code);
-//	} else if ((code >= 0x2400) && (code < 0x2800)) {
-//		JEQ(code);
-//	} else if ((code >= 0x2800) && (code < 0x2c00)) {
-//		JNC(code);
-//	} else if ((code >= 0x2c00) && (code < 0x3000)) {
-//		JC(code);
-//	} else if ((code >= 0x3000) && (code < 0x3400)) {
-//		JN(code);
-//	} else if ((code >= 0x3400) && (code < 0x3800)) {
-//		JGE(code);
-//	} else if ((code >= 0x3800) && (code < 0x3c00)) {
-//		JL(code);
-//	} else if ((code >= 0x3c00) && (code < 0x4000)) {
-//		JMP(code);
-//	} else if ((code >= 0x4000) && (code < 0x5000)) {
-//		MOV(code);
-//	} else if ((code >= 0x5000) && (code < 0x6000)) {
-//		ADD(code);
-//	} else if ((code >= 0x6000) && (code < 0x7000)) {
-//		ADDC(code);
-//	} else if ((code >= 0x7000) && (code < 0x8000)) {
-//		SUB(code);
-//	} else if ((code >= 0x8000) && (code < 0x9000)) {
-//		SUBC(code);
-//	} else if ((code >= 0x9000) && (code < 0xa000)) {
-//		CMP(code);
-//	} else if ((code >= 0xa000) && (code < 0xb000)) {
-//		DADD(code);
-//	} else if ((code >= 0xb000) && (code < 0xc000)) {
-//		BIT(code);
-//	} else if ((code >= 0xc000) && (code < 0xd000)) {
-//		BIC(code);
-//	} else if ((code >= 0xd000) && (code < 0xe000)) {
-//		BIS(code);
-//	} else if ((code >= 0xe000) && (code < 0xf000)) {
-//		XOR(code);
-//	} else if ((code >= 0xf000) && (code <= 0xffff)) {
-//		AND(code);
-//	} else {
-//		cout << "Undefined Instruction! address=0x"
-//				<< std::hex << pc
-//				<< " instruction=0x" << code << endl;
-//	}
 }
 
 void MSP430Cpu::run(void)
@@ -542,29 +481,31 @@ void MSP430Cpu::MOV(DoubleOperandInstruction code)
 		uint16_t src_data_addr = 0;
 		if ((src_reg != 2) && (src_reg != 3)) {
 			src_data_addr = reg[src_reg];
+			disasm += "@r" + to_string(src_reg) + ", ";
 		} else if (src_reg == 2) {	// when as == 2, r2 is constant 0x0004
 			src_data_addr = 0x0004;
+			disasm += "#4, ";
 		} else if (src_reg == 3) {  // when as == 2, r3 is constant 0x0002
 			src_data_addr = 0x0002;
+			disasm += "#2, ";
 		}
 
 		src_data = m_ram.get()[src_data_addr];
-
-		disasm += "@r" + to_string(src_reg) + ", ";
 	} else if (as == 3) { // Indirect autoincrement mode or Immediate mode
 		if (src_reg != 0) { // Indirect autoincrement mode
 			uint16_t src_data_addr = 0;
 			if ((src_reg != 2) && (src_reg != 3)) {
 				src_data_addr = reg[src_reg];
 				reg[src_reg] += (b_w ? 1 : 2);
+				disasm += "@r" + to_string(src_reg) + "+, ";
 			} else if (src_reg == 2) {	// when as == 3, r2 is constant 0x0008
 				src_data_addr = 0x0008;
+				disasm += "#8, ";
 			} else if (src_reg == 3) {	// when as == 3, r3 is constant 0xffff
 				src_data_addr = 0xffff;
+				disasm += "#-1, ";
 			}
 			src_data = m_ram.get()[src_data_addr];
-
-			disasm += "@r" + to_string(src_reg) + "+, ";
 		} else {			// Immediate mode
 			src_data = *(reinterpret_cast<const int16_t*>(&m_rom[pc]));
 			addPC(2);

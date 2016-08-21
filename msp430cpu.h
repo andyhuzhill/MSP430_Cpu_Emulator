@@ -19,6 +19,18 @@ class MSP430Cpu;
 #pragma packed(0)
 
 typedef struct {
+#ifdef __ORDER_LITTLE_ENDIAN__
+	uint8_t C		: 1;
+	uint8_t Z		: 1;
+	uint8_t N		: 1;
+	uint8_t GIE		: 1;
+	uint8_t CPU_OFF	: 1;
+	uint8_t OSC_OFF	: 1;
+	uint8_t SCG0	: 1;
+	uint8_t SCG1	: 1;
+	uint8_t V		: 1;
+	uint8_t reserved: 7;
+#else
 	uint8_t reserved: 7;
 	uint8_t V		: 1;
 	uint8_t SCG1	: 1;
@@ -29,29 +41,51 @@ typedef struct {
 	uint8_t N		: 1;
 	uint8_t Z		: 1;
 	uint8_t C		: 1;
+#endif
 } StatusRegister;
 
 typedef struct {
+#ifdef __ORDER_LITTLE_ENDIAN__
+	uint8_t d_reg  : 4;
+	uint8_t As     : 2;
+	uint8_t b_w    : 1;
+	uint8_t Ad	   : 1;
+	uint8_t s_reg  : 4;
+	uint8_t opcode : 4;
+#else
 	uint8_t opcode : 4;
 	uint8_t s_reg  : 4;
-	uint8_t Ad     : 1;
+	uint8_t Ad	   : 1;
 	uint8_t b_w    : 1;
-	uint8_t As	   : 2;
+	uint8_t As     : 2;
 	uint8_t d_reg  : 4;
+#endif
 } DoubleOperandInstruction;
 typedef void (MSP430Cpu::*DoubleOperandFunc)(DoubleOperandInstruction);
 
 typedef struct {
-	uint16_t opcode : 9;
-	uint8_t  b_w	: 1;
-	uint16_t Ad 	: 2;
+#ifdef __ORDER_LITTLE_ENDIAN__
 	uint8_t  s_d_reg: 4;
+	uint8_t  Ad     : 2;
+	uint8_t  b_w	: 1;
+	uint16_t opcode : 9;
+#else
+	uint16_t opcode : 9;
+	uint8_t b_w		: 1;
+	uint8_t Ad      : 2;
+	uint8_t s_d_reg : 4;
+#endif
 } SingleOperandInstruction;
 typedef void (MSP430Cpu::*SingleOperandFunc)(SingleOperandInstruction);
 
 typedef struct {
+#ifdef __ORDER_LITTLE_ENDIAN__
+	uint16_t offset : 10;
+	uint8_t  opcode : 6;
+#else
 	uint8_t  opcode : 6;
 	uint16_t offset : 10;
+#endif
 } JumpsInstruction;
 typedef void (MSP430Cpu::*JumpsFunc)(JumpsInstruction);
 
@@ -111,7 +145,7 @@ private:
 	void SUB(DoubleOperandInstruction code);  // TODO
 	void SUBC(DoubleOperandInstruction code); // TODO
 	void CMP(DoubleOperandInstruction code);  // TODO
- 	void DADD(DoubleOperandInstruction code); // TODO
+	void DADD(DoubleOperandInstruction code); // TODO
 	void BIT(DoubleOperandInstruction code);  // TODO
 	void BIC(DoubleOperandInstruction code);  // TODO
 	void BIS(DoubleOperandInstruction code);  // TODO
@@ -130,7 +164,7 @@ private:
 			{0xc, &MSP430Cpu::BIC},
 			{0xd, &MSP430Cpu::BIS},
 			{0xe, &MSP430Cpu::XOR},
-			{0XF, &MSP430Cpu::AND},
+			{0Xf, &MSP430Cpu::AND},
 	};
 
 	// Single-Operand(Format II) Instructions
@@ -144,12 +178,12 @@ private:
 
 	unordered_map<int, SingleOperandFunc> singleOperandFunctions = {
 			{0x20, &MSP430Cpu::RRC},
-			{0x21, &MSP430Cpu::RRA},
-			{0x22, &MSP430Cpu::PUSH},
-			{0x23, &MSP430Cpu::SWPB},
-			{0x24, &MSP430Cpu::CALL},
-			{0x25, &MSP430Cpu::RETI},
-			{0x26, &MSP430Cpu::SXT},
+			{0x21, &MSP430Cpu::SWPB},
+			{0x22, &MSP430Cpu::RRA},
+			{0x23, &MSP430Cpu::SXT},
+			{0x24, &MSP430Cpu::PUSH},
+			{0x25, &MSP430Cpu::CALL},
+			{0x26, &MSP430Cpu::RETI},
 	};
 
 	// Jumps
