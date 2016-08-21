@@ -61,7 +61,6 @@ typedef struct {
 	uint8_t d_reg  : 4;
 #endif
 } DoubleOperandInstruction;
-typedef void (MSP430Cpu::*DoubleOperandFunc)(DoubleOperandInstruction);
 
 typedef struct {
 #ifdef __ORDER_LITTLE_ENDIAN__
@@ -76,7 +75,6 @@ typedef struct {
 	uint8_t s_d_reg : 4;
 #endif
 } SingleOperandInstruction;
-typedef void (MSP430Cpu::*SingleOperandFunc)(SingleOperandInstruction);
 
 typedef struct {
 #ifdef __ORDER_LITTLE_ENDIAN__
@@ -87,7 +85,6 @@ typedef struct {
 	uint16_t offset : 10;
 #endif
 } JumpsInstruction;
-typedef void (MSP430Cpu::*JumpsFunc)(JumpsInstruction);
 
 #pragma packed()
 
@@ -152,19 +149,19 @@ private:
 	void XOR(DoubleOperandInstruction code);  // TODO
 	void AND(DoubleOperandInstruction code);  // TODO
 
-	unordered_map<int, DoubleOperandFunc> doubleOperandFunctions = {
-			{0x4, &MSP430Cpu::MOV},
-			{0x5, &MSP430Cpu::ADD},
-			{0x6, &MSP430Cpu::ADDC},
-			{0x7, &MSP430Cpu::SUB},
-			{0x8, &MSP430Cpu::SUBC},
-			{0x9, &MSP430Cpu::CMP},
-			{0xa, &MSP430Cpu::DADD},
-			{0xb, &MSP430Cpu::BIT},
-			{0xc, &MSP430Cpu::BIC},
-			{0xd, &MSP430Cpu::BIS},
-			{0xe, &MSP430Cpu::XOR},
-			{0Xf, &MSP430Cpu::AND},
+	unordered_map<int, function<void(DoubleOperandInstruction)>> doubleOperandFunctions = {
+			{0x4, bind(&MSP430Cpu::MOV, this, placeholders::_1)},
+			{0x5, bind(&MSP430Cpu::ADD, this, placeholders::_1)},
+			{0x6, bind(&MSP430Cpu::ADDC, this, placeholders::_1)},
+			{0x7, bind(&MSP430Cpu::SUB, this, placeholders::_1)},
+			{0x8, bind(&MSP430Cpu::SUBC, this, placeholders::_1)},
+			{0x9, bind(&MSP430Cpu::CMP, this, placeholders::_1)},
+			{0xa, bind(&MSP430Cpu::DADD, this, placeholders::_1)},
+			{0xb, bind(&MSP430Cpu::BIT, this, placeholders::_1)},
+			{0xc, bind(&MSP430Cpu::BIC, this, placeholders::_1)},
+			{0xd, bind(&MSP430Cpu::BIS, this, placeholders::_1)},
+			{0xe, bind(&MSP430Cpu::XOR, this, placeholders::_1)},
+			{0Xf, bind(&MSP430Cpu::AND, this, placeholders::_1)},
 	};
 
 	// Single-Operand(Format II) Instructions
@@ -176,14 +173,14 @@ private:
 	void RETI(SingleOperandInstruction code);
 	void SXT(SingleOperandInstruction code);
 
-	unordered_map<int, SingleOperandFunc> singleOperandFunctions = {
-			{0x20, &MSP430Cpu::RRC},
-			{0x21, &MSP430Cpu::SWPB},
-			{0x22, &MSP430Cpu::RRA},
-			{0x23, &MSP430Cpu::SXT},
-			{0x24, &MSP430Cpu::PUSH},
-			{0x25, &MSP430Cpu::CALL},
-			{0x26, &MSP430Cpu::RETI},
+	unordered_map<int, function<void(SingleOperandInstruction)>> singleOperandFunctions =  {
+			{0x20, bind(&MSP430Cpu::RRC, this, placeholders::_1)},
+			{0x21, bind(&MSP430Cpu::SWPB, this, placeholders::_1)},
+			{0x22, bind(&MSP430Cpu::RRA, this, placeholders::_1)},
+			{0x23, bind(&MSP430Cpu::SXT, this, placeholders::_1)},
+			{0x24, bind(&MSP430Cpu::PUSH, this, placeholders::_1)},
+			{0x25, bind(&MSP430Cpu::CALL, this, placeholders::_1)},
+			{0x26, bind(&MSP430Cpu::RETI, this, placeholders::_1)},
 	};
 
 	// Jumps
@@ -196,15 +193,15 @@ private:
 	void JL(JumpsInstruction code);
 	void JMP(JumpsInstruction code);
 
-	unordered_map<int, JumpsFunc> jumpsFunctions = {
-			{0x8, &MSP430Cpu::JNE},
-			{0x9, &MSP430Cpu::JEQ},
-			{0xa, &MSP430Cpu::JNC},
-			{0xb, &MSP430Cpu::JC},
-			{0xc, &MSP430Cpu::JN},
-			{0xd, &MSP430Cpu::JGE},
-			{0xe, &MSP430Cpu::JL},
-			{0xf, &MSP430Cpu::JMP},
+	unordered_map<int, function<void(JumpsInstruction)>> jumpsFunctions = {
+			{0x8, bind(&MSP430Cpu::JNE, this, placeholders::_1)},
+			{0x9, bind(&MSP430Cpu::JEQ, this, placeholders::_1)},
+			{0xa, bind(&MSP430Cpu::JNC, this, placeholders::_1)},
+			{0xb, bind(&MSP430Cpu::JC, this, placeholders::_1)},
+			{0xc, bind(&MSP430Cpu::JN, this, placeholders::_1)},
+			{0xd, bind(&MSP430Cpu::JGE, this, placeholders::_1)},
+			{0xe, bind(&MSP430Cpu::JL, this, placeholders::_1)},
+			{0xf, bind(&MSP430Cpu::JMP, this, placeholders::_1)},
 	};
 };
 

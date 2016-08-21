@@ -25,6 +25,8 @@ start:
 	push &EDE
 	
 	push EDE
+	
+	jmp .L2
 
 	mov #0x0080, r7
 		

@@ -41,15 +41,15 @@ void MSP430Cpu::translateCode(uint16_t val)
 	if ((val >= 0x1000) && (val < 0x3400)) {
 		SingleOperandInstruction singleInstruction = *reinterpret_cast<SingleOperandInstruction*>(&val);
 		auto function = singleOperandFunctions[singleInstruction.opcode];
-		(this->*function)(singleInstruction);
+		function(singleInstruction);
 	} else if ((val >= 0x2000) && (val < 0x4000)) {
 		JumpsInstruction jumpsInstruction = *reinterpret_cast<JumpsInstruction*>(&val);
 		auto function = jumpsFunctions[jumpsInstruction.opcode];
-		(this->*function)(jumpsInstruction);
+		function(jumpsInstruction);
 	} else if ((val >= 0x4000) && (val < 0xffff)) {
 		DoubleOperandInstruction doubleInstruction = *reinterpret_cast<DoubleOperandInstruction*>(&val);
 		auto function = doubleOperandFunctions[doubleInstruction.opcode];
-		(this->*function)(doubleInstruction);
+		function(doubleInstruction);
 	} else {
 		cout << "Undefined Instruction! address=0x"
 				<< std::hex << pc
@@ -124,6 +124,7 @@ void MSP430Cpu::RRA(SingleOperandInstruction code)
 {
 	cout << "rra " << endl;
 }
+
 void MSP430Cpu::SXT(SingleOperandInstruction code)
 {
 	uint8_t dst_reg = code.s_d_reg;
@@ -290,6 +291,7 @@ void MSP430Cpu::CALL(SingleOperandInstruction code)
 		setPC(call_address);
 	}
 }
+
 void MSP430Cpu::RETI(SingleOperandInstruction)
 {
 	uint16_t tos = m_ram.get()[sp];
