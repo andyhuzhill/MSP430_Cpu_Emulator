@@ -135,19 +135,24 @@ private:
 	void setSP(uint16_t sp_val);
 	void addSP(uint16_t add_val);
 
+	uint16_t getDoubleOpSourceOperand(DoubleOperandInstruction code, string &disasm);
+
+	int16_t  bcd2bin(int16_t data, bool is8Bit);
+	int16_t  bin2bcd(int16_t data, bool is8Bit);
+
 	// Double-Operand(Format I) Instructions
 	void MOV(DoubleOperandInstruction code);
-	void ADD(DoubleOperandInstruction code);  // TODO
-	void ADDC(DoubleOperandInstruction code); // TODO
-	void SUB(DoubleOperandInstruction code);  // TODO
-	void SUBC(DoubleOperandInstruction code); // TODO
-	void CMP(DoubleOperandInstruction code);  // TODO
-	void DADD(DoubleOperandInstruction code); // TODO
-	void BIT(DoubleOperandInstruction code);  // TODO
-	void BIC(DoubleOperandInstruction code);  // TODO
-	void BIS(DoubleOperandInstruction code);  // TODO
-	void XOR(DoubleOperandInstruction code);  // TODO
-	void AND(DoubleOperandInstruction code);  // TODO
+	void ADD(DoubleOperandInstruction code);
+	void ADDC(DoubleOperandInstruction code);
+	void SUB(DoubleOperandInstruction code);
+	void SUBC(DoubleOperandInstruction code);
+	void CMP(DoubleOperandInstruction code);
+	void DADD(DoubleOperandInstruction code);
+	void BIT(DoubleOperandInstruction code);
+	void BIC(DoubleOperandInstruction code);
+	void BIS(DoubleOperandInstruction code);
+	void XOR(DoubleOperandInstruction code);
+	void AND(DoubleOperandInstruction code);
 
 	unordered_map<int, function<void(DoubleOperandInstruction)>> doubleOperandFunctions = {
 			{0x4, bind(&MSP430Cpu::MOV, this, placeholders::_1)},
@@ -165,8 +170,8 @@ private:
 	};
 
 	// Single-Operand(Format II) Instructions
-	void RRC(SingleOperandInstruction code); // TODO
-	void RRA(SingleOperandInstruction code);  // TODO
+	void RRC(SingleOperandInstruction code);
+	void RRA(SingleOperandInstruction code);
 	void PUSH(SingleOperandInstruction code);
 	void SWPB(SingleOperandInstruction code);
 	void CALL(SingleOperandInstruction code);
