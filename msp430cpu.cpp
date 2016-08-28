@@ -336,7 +336,7 @@ void MSP430Cpu::JNC(JumpsInstruction code)
 		offset |= 0xfc00;
 	}
 	if (!sr->C) {
-		addPC (offset << 1);
+		addPC(offset << 1);
 	}
 
 	cout << "jnc $" + to_string(offset)  << endl;
@@ -349,7 +349,7 @@ void MSP430Cpu::JC(JumpsInstruction code)
 		offset |= 0xfc00;
 	}
 	if (sr->C) {
-		addPC (offset << 1);
+		addPC(offset << 1);
 	}
 
 	cout << "jc $" + to_string(offset)  << endl;
@@ -362,7 +362,7 @@ void MSP430Cpu::JN(JumpsInstruction code)
 		offset |= 0xfc00;
 	}
 	if (sr->N) {
-		addPC (offset << 1);
+		addPC(offset << 1);
 	}
 
 	cout << "jn $" + to_string(offset)  << endl;
@@ -375,7 +375,7 @@ void MSP430Cpu::JGE(JumpsInstruction code)
 		offset |= 0xfc00;
 	}
 	if (!(sr->N ^ sr->V)) {
-		addPC (offset << 1);
+		addPC(offset << 1);
 	}
 
 	cout << "jge $" + to_string(offset)  << endl;
@@ -388,7 +388,7 @@ void MSP430Cpu::JL(JumpsInstruction code)
 		offset |= 0xfc00;
 	}
 	if ((sr->N ^ sr->V)) {
-		addPC  (offset << 1);
+		addPC (offset << 1);
 	}
 
 	cout << "jl $" + to_string(offset)  << endl;
@@ -420,7 +420,7 @@ void MSP430Cpu::JMP(JumpsInstruction code)
 	if (offset & 0x200) {
 		offset |= 0xfc00;
 	}
-	addPC (offset << 1);
+	addPC(offset << 1);
 	cout << "jmp $" + to_string(offset)  << endl;
 }
 
