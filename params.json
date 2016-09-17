@@ -1,0 +1,6 @@
+{
+  "name": "Msp430 cpu emulator",
+  "tagline": "A Simple MSP430 CPU Emulator writen in C++",
+  "body": "# MSP430_Cpu_Emulator\r\n\r\n  Imply a simple MSP430 cpu, with support for 27 instructions and 7 addressing mode.\r\n  \r\n## Reference Resources\r\n  \r\n  MSP430i2xx Family User's Guide  Chapter 2\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
