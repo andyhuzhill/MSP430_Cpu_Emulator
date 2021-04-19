@@ -93,7 +93,7 @@ public:
 	MSP430Cpu();
 	virtual ~MSP430Cpu() = default;
 
-	void loadBinRom(const char* const rom_data, long data_size);
+	void loadProgram(const char* const rom_data, long data_size);
 
 	void run(void);
 

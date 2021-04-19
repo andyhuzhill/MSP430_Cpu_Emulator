@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 	try {
 		unique_ptr<char> rom = unique_ptr<char>(new char[data_size]);
 		rom_file.read(rom.get(), data_size);
-		cpu.loadBinRom(rom.get(), data_size);
+		cpu.loadProgram(rom.get(), data_size);
 
 		cpu.run();
 	} catch (std::bad_alloc&) {

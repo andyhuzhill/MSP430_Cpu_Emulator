@@ -19,7 +19,7 @@ MSP430Cpu::MSP430Cpu()
 	memset(m_ram.get(), 0, 0xffff);
 }
 
-void MSP430Cpu::loadBinRom(const char* const rom_data, long data_size)
+void MSP430Cpu::loadProgram(const char* const rom_data, long data_size)
 {
 	m_rom = rom_data;
 	program_size = data_size;
