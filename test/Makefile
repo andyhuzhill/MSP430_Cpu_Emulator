@@ -15,10 +15,9 @@ c430:
 	mv test.c430 test.c
 	$(GCC) -std=c99 -mmcu=msp430g2553 -o test.elf test.c
 	mv test.c test.c430
-	$(OBJCOPY) -I elf32-msp430  test.elf -O binary test.bin
+	$(OBJCOPY) -I elf32-msp430 test.elf -O binary test.bin
 	$(OBJDUMP) -d test.elf > test.s
 	$(CP) test.bin ..
 	
-   
 clean:
 	$(RM) -rf *.elf *.bin *.s
