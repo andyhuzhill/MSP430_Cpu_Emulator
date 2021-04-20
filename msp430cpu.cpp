@@ -15,7 +15,7 @@ using namespace std;
 
 MSP430Cpu::MSP430Cpu()
 {
-    m_ram = shared_ptr<uint8_t>(new uint8_t[0xffff]);
+    m_ram = make_unique<uint8_t[]>(0xffff);
     memset(m_ram.get(), 0, 0xffff);
 }
 
@@ -36,51 +36,51 @@ uint16_t MSP430Cpu::loadNextInstruction()
     return code;
 }
 
-void MSP430Cpu::translateCode(uint16_t val)
+void MSP430Cpu::executeCode(uint16_t code)
 {
-    if ((val >= 0x1000) && (val < 0x3400)) {
-        SingleOperandInstruction singleInstruction = *reinterpret_cast<SingleOperandInstruction *>(&val);
+    if ((code >= 0x1000) && (code < 0x3400)) {
+        SingleOperandInstruction singleInstruction = *reinterpret_cast<SingleOperandInstruction *>(&code);
         if (singleOperandFunctions.find(singleInstruction.opcode) != std::end(singleOperandFunctions)) {
             auto function = singleOperandFunctions[singleInstruction.opcode];
             function(singleInstruction);
-        } else if ((val >= 0x2000) && (val < 0x4000)) {
-            JumpsInstruction jumpsInstruction = *reinterpret_cast<JumpsInstruction *>(&val);
+        } else if ((code >= 0x2000) && (code < 0x4000)) {
+            JumpsInstruction jumpsInstruction = *reinterpret_cast<JumpsInstruction *>(&code);
 
             if (jumpsFunctions.find(jumpsInstruction.opcode) != std::end(jumpsFunctions)) {
                 auto function = jumpsFunctions[jumpsInstruction.opcode];
                 function(jumpsInstruction);
             } else {
-                cerr << "unknown instruction !" << std::hex << val << endl;
+                cerr << "unknown instruction !" << std::hex << code << endl;
                 cout << " jumpsInstruction.opcode = " << std::hex << static_cast<int>(jumpsInstruction.opcode) << endl;
                 getchar();
             }
         }
-    } else if ((val >= 0x2000) && (val < 0x4000)) {
-        JumpsInstruction jumpsInstruction = *reinterpret_cast<JumpsInstruction *>(&val);
+    } else if ((code >= 0x2000) && (code < 0x4000)) {
+        JumpsInstruction jumpsInstruction = *reinterpret_cast<JumpsInstruction *>(&code);
 
         if (jumpsFunctions.find(jumpsInstruction.opcode) != std::end(jumpsFunctions)) {
             auto function = jumpsFunctions[jumpsInstruction.opcode];
             function(jumpsInstruction);
         } else {
-            cerr << "unknown instruction !" << std::hex << val << endl;
+            cerr << "unknown instruction !" << std::hex << code << endl;
             cout << " jumpsInstruction.opcode = " << std::hex << static_cast<int>(jumpsInstruction.opcode) << endl;
             getchar();
         }
-    } else if ((val >= 0x4000) && (val < 0xffff)) {
-        DoubleOperandInstruction doubleInstruction = *reinterpret_cast<DoubleOperandInstruction *>(&val);
+    } else if ((code >= 0x4000) && (code < 0xffff)) {
+        DoubleOperandInstruction doubleInstruction = *reinterpret_cast<DoubleOperandInstruction *>(&code);
 
         if (doubleOperandFunctions.find(doubleInstruction.opcode) != std::end(doubleOperandFunctions)) {
             auto function = doubleOperandFunctions[doubleInstruction.opcode];
             function(doubleInstruction);
         } else {
-            cerr << "unknown instruction !" << std::hex << val << endl;
+            cerr << "unknown instruction !" << std::hex << code << endl;
             cout << "doubleInstruction.opcode = " << std::hex << static_cast<int>(doubleInstruction.opcode) << endl;
             getchar();
         }
     } else {
         cout << "Undefined Instruction! address=0x"
              << std::hex << pc
-             << " instruction=0x" << val << endl;
+             << " instruction= " << code << endl;
         getchar();
     }
 }
@@ -90,8 +90,8 @@ void MSP430Cpu::run(void)
 {
     for (;;) {
         uint16_t code = loadNextInstruction();
-        translateCode(code);
-        printRegister();
+        executeCode(code);
+//        printRegister();
         if (step_run) {
             getchar();
         }
@@ -141,7 +141,7 @@ void MSP430Cpu::RRC(SingleOperandInstruction code)
             sr->Z = (byteData == 0);
 
             reg[code.s_d_reg] = byteData;
-            cout << "rrc.b r" + to_string(code.s_d_reg) << endl;
+            cout << std::hex << pc << ": rrc.b r" + to_string(code.s_d_reg) << endl;
         } else {
             uint16_t wordData = reg[code.s_d_reg];
             sr->N = sr->C;
@@ -154,8 +154,7 @@ void MSP430Cpu::RRC(SingleOperandInstruction code)
             sr->Z = (wordData == 0);
             reg[code.s_d_reg] = wordData;
 
-            cout << "address=0x"
-                 << std::hex << pc << " rrc r" << to_string(code.s_d_reg) << endl;
+            cout << std::hex << pc << ": rrc r" << to_string(code.s_d_reg) << endl;
         }
     }  else if (code.Ad == 1) { // Indexed mode Symbolic Mode Absolute Mode
         uint16_t dst_data_base = reg[code.s_d_reg];
@@ -175,7 +174,7 @@ void MSP430Cpu::RRC(SingleOperandInstruction code)
             }
             sr->Z = (dst_data == 0);
             m_ram.get()[dst_data_address] = dst_data;
-            cout << "rrc.b " + to_string(dst_data_offset) +
+            cout << std::hex << pc << ": rrc.b " + to_string(dst_data_offset) +
                  "(r" + to_string(code.s_d_reg) + ")" << endl;
         } else {
             uint16_t dst_data = *reinterpret_cast<uint16_t *>(&m_ram.get()[dst_data_address]);
@@ -188,8 +187,7 @@ void MSP430Cpu::RRC(SingleOperandInstruction code)
             }
             sr->Z = (dst_data == 0);
             *reinterpret_cast<uint16_t *>(m_ram.get()[dst_data_address]) = dst_data;
-            cout << "address=0x"
-                 << std::hex << pc << " rrc " + to_string(dst_data_offset) +
+            cout << std::hex << pc << ": rrc " + to_string(dst_data_offset) +
                  "(r" + to_string(code.s_d_reg) + ")" << endl;
         }
     } else if (code.Ad == 2) { // Absolute Mode
@@ -206,8 +204,7 @@ void MSP430Cpu::RRC(SingleOperandInstruction code)
             }
             sr->Z = (dst_data == 0);
             m_ram.get()[dst_data_address] = dst_data;
-            cout << "address=0x"
-                 << std::hex << pc << " rrc.b @r" + to_string(code.s_d_reg) << endl;
+            cout << std::hex << pc << ": rrc.b @r" + to_string(code.s_d_reg) << endl;
         } else {
             uint16_t dst_data = *reinterpret_cast<uint16_t *>(&m_ram.get()[dst_data_address]);
             sr->N = sr->C;
@@ -219,8 +216,7 @@ void MSP430Cpu::RRC(SingleOperandInstruction code)
             }
             sr->Z = (dst_data == 0);
             *reinterpret_cast<uint16_t *>(&m_ram.get()[dst_data_address]) = dst_data;
-            cout << "address=0x"
-                 << std::hex << pc << " rrc @r" + to_string(code.s_d_reg) << endl;
+            cout << std::hex << pc << ": rrc @r" + to_string(code.s_d_reg) << endl;
         }
     }
 }
@@ -236,8 +232,7 @@ void MSP430Cpu::SWPB(SingleOperandInstruction code)
         uint16_t high_byte = (dst_data >> 8) & 0xff;
         reg[dst_reg] = (low_byte << 8) + high_byte;
 
-        cout << "address=0x"
-             << std::hex << pc << " swpb r" + to_string(dst_reg) << endl;
+        cout << std::hex << pc << ": swpb r" + to_string(dst_reg) << endl;
     } else if (ad == 1) {
         uint16_t dst_data_base = reg[dst_reg];
         uint16_t dst_data_offset = *reinterpret_cast<const uint16_t *>(&m_rom[pc]);
@@ -249,8 +244,7 @@ void MSP430Cpu::SWPB(SingleOperandInstruction code)
         uint16_t high_byte = (dst_data >> 8) & 0xff;
         m_ram.get()[dst_data_address] = (low_byte << 8) + high_byte;
 
-        cout << "address=0x"
-             << std::hex << pc << " swpb " + to_string(dst_data_offset) +
+        cout << std::hex << pc << ": swpb " + to_string(dst_data_offset) +
              "(r" + to_string(dst_reg) + ")" << endl;
     } else if (ad == 2) {
         uint16_t dst_data_address = reg[dst_reg];
@@ -259,11 +253,9 @@ void MSP430Cpu::SWPB(SingleOperandInstruction code)
         uint16_t high_byte = (dst_data >> 8) & 0xff;
         m_ram.get()[dst_data_address] = (low_byte << 8) + high_byte;
 
-        cout << "address=0x"
-             << std::hex << pc << " swpb @r" + to_string(dst_reg) << endl;
+        cout << std::hex << pc << ": swpb @r" + to_string(dst_reg) << endl;
     } else {
-        cout << "address=0x"
-             << std::hex << pc << " swpb " << endl;
+        cout << std::hex << pc << ": swpb " << endl;
     }
 }
 
@@ -283,7 +275,7 @@ void MSP430Cpu::RRA(SingleOperandInstruction code)
             sr->Z = (byteData == 0);
 
             reg[code.s_d_reg] = byteData;
-            cout << "rra.b r" + to_string(code.s_d_reg) << endl;
+            cout << std::hex << pc << ": rra.b r" + to_string(code.s_d_reg) << endl;
         } else {
             uint16_t wordData = reg[code.s_d_reg];
             sr->N = (wordData & 0x8000);
@@ -296,7 +288,7 @@ void MSP430Cpu::RRA(SingleOperandInstruction code)
             sr->Z = (wordData == 0);
             reg[code.s_d_reg] = wordData;
 
-            cout << "rra r" << to_string(code.s_d_reg) << endl;
+            cout << std::hex << pc << ": rra r" << to_string(code.s_d_reg) << endl;
         }
     }  else if (code.Ad == 1) { // Indexed mode Symbolic Mode Absolute Mode
         uint16_t dst_data_base = reg[code.s_d_reg];
@@ -316,7 +308,7 @@ void MSP430Cpu::RRA(SingleOperandInstruction code)
             }
             sr->Z = (dst_data == 0);
             m_ram.get()[dst_data_address] = dst_data;
-            cout << "rra.b " + to_string(dst_data_offset) +
+            cout << std::hex << pc << ": rra.b " + to_string(dst_data_offset) +
                  "(r" + to_string(code.s_d_reg) + ")" << endl;
         } else {
             uint16_t dst_data = *reinterpret_cast<uint16_t *>(&m_ram.get()[dst_data_address]);
@@ -329,7 +321,7 @@ void MSP430Cpu::RRA(SingleOperandInstruction code)
             }
             sr->Z = (dst_data == 0);
             *reinterpret_cast<uint16_t *>(m_ram.get()[dst_data_address]) = dst_data;
-            cout << "rra " + to_string(dst_data_offset) +
+            cout << std::hex << pc << ": rra " + to_string(dst_data_offset) +
                  "(r" + to_string(code.s_d_reg) + ")" << endl;
         }
     } else if (code.Ad == 2) { // Absolute Mode
@@ -346,7 +338,7 @@ void MSP430Cpu::RRA(SingleOperandInstruction code)
             }
             sr->Z = (dst_data == 0);
             m_ram.get()[dst_data_address] = dst_data;
-            cout << "rra.b @r" + to_string(code.s_d_reg) << endl;
+            cout << std::hex << pc << ": rra.b @r" + to_string(code.s_d_reg) << endl;
         } else {
             uint16_t dst_data = *reinterpret_cast<uint16_t *>(&m_ram.get()[dst_data_address]);
             sr->N = dst_data & 0x80;
@@ -358,7 +350,7 @@ void MSP430Cpu::RRA(SingleOperandInstruction code)
             }
             sr->Z = (dst_data == 0);
             *reinterpret_cast<uint16_t *>(&m_ram.get()[dst_data_address]) = dst_data;
-            cout << "rra @r" + to_string(code.s_d_reg) << endl;
+            cout << std::hex << pc << ": rra @r" + to_string(code.s_d_reg) << endl;
         }
     }
 }
@@ -378,7 +370,7 @@ void MSP430Cpu::SXT(SingleOperandInstruction code)
         }
         sr->Z = !reg[dst_reg];
 
-        cout << "sxt r" + to_string(dst_reg) << endl;
+        cout << std::hex << pc << ": sxt r" + to_string(dst_reg) << endl;
     } else if (ad == 1) { // Indexed mode Symbolic Mode Absolute Mode
         uint16_t dst_data_base = reg[dst_reg];
         uint16_t dst_data_offset = *reinterpret_cast<const uint16_t *>(&m_rom[pc]);
@@ -397,7 +389,7 @@ void MSP430Cpu::SXT(SingleOperandInstruction code)
         sr->Z = !dst_data;
         m_ram.get()[dst_data_address] = dst_data;
 
-        cout << "sxt " + to_string(dst_data_offset) +
+        cout << std::hex << pc << ": sxt " + to_string(dst_data_offset) +
              "(r" + to_string(dst_reg) + ")" << endl;
     } else if (ad == 2) { // Absolute Mode
         uint16_t dst_data_address = reg[dst_reg];
@@ -412,7 +404,7 @@ void MSP430Cpu::SXT(SingleOperandInstruction code)
         sr->Z = !dst_data;
         m_ram.get()[dst_data_address] = dst_data;
 
-        cout << "sxt @r" + to_string(dst_reg) << endl;
+        cout << std::hex  << pc << ": sxt @r" + to_string(dst_reg) << endl;
     }
 
     sr->C = !sr->Z;
@@ -431,11 +423,11 @@ void MSP430Cpu::PUSH(SingleOperandInstruction code)
         if (b_w) {
             src_data = reg[src_reg] & 0xff;
             m_ram.get()[sp] = src_data;
-            cout << "push.b r" + to_string(src_reg) << endl;
+            cout << std::hex << pc << ": push.b r" + to_string(src_reg) << endl;
         } else {
             src_data = reg[src_reg];
             *(reinterpret_cast<uint16_t *>(&m_ram.get()[sp])) = src_data;
-            cout << "push r" + to_string(src_reg) << endl;
+            cout << std::hex << pc << ": push r" + to_string(src_reg) << endl;
         }
     } else if (ad == 1) { // Indexed mode Symbolic mode Absolute mode
         uint16_t src_data_base = reg[src_reg];
@@ -454,11 +446,11 @@ void MSP430Cpu::PUSH(SingleOperandInstruction code)
         }
 
         if (src_reg == 0) { // Symbolic Mode
-            cout << (b_w ? "push.b " : "pusb ") + to_string(src_data_address) << endl;
+            cout << std::hex << pc << ": " << (b_w ? "push.b " : "pusb ") + to_string(src_data_address) << endl;
         } else if (src_reg == 2) {
-            cout << (b_w ? "push.b &" : "pusb &") + to_string(src_data_address) << endl;
+            cout << std::hex << pc << ": " << (b_w ? "push.b &" : "pusb &") + to_string(src_data_address) << endl;
         } else {
-            cout << (b_w ? "push.b " : "pusb ") + to_string(src_data_offset) +
+            cout << std::hex << pc << ": " << (b_w ? "push.b " : "pusb ") + to_string(src_data_offset) +
                  "(r" + to_string(src_reg) + ")" << endl;
         }
     } else if (ad == 2) {
@@ -471,7 +463,7 @@ void MSP430Cpu::PUSH(SingleOperandInstruction code)
             src_data = *reinterpret_cast<uint16_t *>(&m_ram.get()[src_data_address]);
             *reinterpret_cast<uint16_t *>(&m_ram.get()[pc]) = src_data;
         }
-        cout << (b_w ? "push.b @r" : "pusb @r") + to_string(src_reg) << endl;
+        cout << std::hex << pc << ": " << (b_w ? "push.b @r" : "pusb @r") + to_string(src_reg) << endl;
     }
 
     m_ram.get()[sp] = src_data;
@@ -486,9 +478,9 @@ void MSP430Cpu::CALL(SingleOperandInstruction code)
         uint16_t call_address = reg[dst_reg];
         if (dst_reg == 3) {
             call_address = 0;
-            cout << "call #0" << endl;
+            cout << std::hex << pc << ": " << "call #0" << endl;
         } else {
-            cout << "call r" << to_string(dst_reg) << endl;
+            cout << std::hex << pc << ": " << "call r" << to_string(dst_reg) << endl;
         }
         sp -= 2;
         m_ram.get()[sp] = pc;
@@ -500,11 +492,11 @@ void MSP430Cpu::CALL(SingleOperandInstruction code)
             uint16_t dst_addr_offset = *reinterpret_cast<const uint16_t *>(&m_rom[pc]);
             addPC(2);
             call_address = dst_addr_base + dst_addr_base;
-            cout << "call " + to_string(dst_addr_offset) +
+            cout << std::hex << pc << ": " << "call " + to_string(dst_addr_offset) +
                  "(r" + to_string(dst_reg) + ")" << endl;
         } else {
             call_address = 1;
-            cout << "call #1" << endl;
+            cout << std::hex << pc << ": " << "call #1" << endl;
         }
         sp -= 2;
         m_ram.get()[sp] = pc;
@@ -514,15 +506,15 @@ void MSP430Cpu::CALL(SingleOperandInstruction code)
         if ((dst_reg != 2) && (dst_reg != 3)) {
             uint16_t dst_addr = reg[dst_reg];
             call_address = m_ram.get()[dst_addr];
-            cout << "call @r" << to_string(dst_reg) << endl;
+            cout << std::hex << pc << ": " << "call @r" << to_string(dst_reg) << endl;
         } else {
             if (dst_reg == 2) {
                 call_address = 0x0004;
-                cout << "call #4" << endl;
+                cout << std::hex << pc << ": " <<  "call #4" << endl;
             }
             if (dst_reg == 3) {
                 call_address = 0x0002;
-                cout << "call #2" << endl;
+                cout <<  std::hex << pc << ": " << "call #2" << endl;
             }
         }
         sp -= 2;
@@ -532,7 +524,7 @@ void MSP430Cpu::CALL(SingleOperandInstruction code)
         uint16_t call_address = 0;
         if (dst_reg == 2) {
             call_address = 0x0008;
-            cout << "call #8" << endl;
+            cout << std::hex << pc << ": " <<  "call #8" << endl;
         }
 
         sp -= 2;
@@ -549,27 +541,21 @@ void MSP430Cpu::RETI(SingleOperandInstruction)
     tos = m_ram.get()[sp];
     setPC(tos);
     addSP(2);
-    cout << "address=0x"
-         << std::hex << pc <<  " reti " << endl;
+    cout << std::hex << pc << ": " <<  "reti " << endl;
 }
 
 void MSP430Cpu::JNE(JumpsInstruction code)
 {
     int16_t offset = code.offset;
 
-    cout << " offset = " << offset << endl;
     if (offset & 0x200) {
         offset |= 0xfc00;
     }
-    cout << " offset= " << offset << endl;
     if (!sr->Z) {
         addPC(offset << 1);
     }
 
-    cout << " offset << 1 =  " << (offset << 1) << endl;
-
-    cout << "address=0x"
-         << std::hex << pc << " jne $" + to_string(offset)  << endl;
+    cout << std::hex << pc << ": " << " jne $" + to_string(offset)  << endl;
 }
 
 void MSP430Cpu::JEQ(JumpsInstruction code)
@@ -582,8 +568,7 @@ void MSP430Cpu::JEQ(JumpsInstruction code)
         addPC(offset << 1);
     }
 
-    cout << "address=0x"
-         << std::hex << pc <<  " jeq $" + to_string(offset)  << endl;
+    cout <<  std::hex << pc << ": " << " jeq $" + to_string(offset)  << endl;
 }
 
 void MSP430Cpu::JNC(JumpsInstruction code)
@@ -596,8 +581,7 @@ void MSP430Cpu::JNC(JumpsInstruction code)
         addPC(offset << 1);
     }
 
-    cout << "address=0x"
-         << std::hex << pc <<  " jnc $" + to_string(offset)  << endl;
+    cout << std::hex << pc << ": " << " jnc $" + to_string(offset)  << endl;
 }
 
 void MSP430Cpu::JC(JumpsInstruction code)
@@ -610,8 +594,7 @@ void MSP430Cpu::JC(JumpsInstruction code)
         addPC(offset << 1);
     }
 
-    cout << "address=0x"
-         << std::hex << pc <<  " jc $" + to_string(offset)  << endl;
+    cout << std::hex << pc << ": " << " jc $" + to_string(offset)  << endl;
 }
 
 void MSP430Cpu::JN(JumpsInstruction code)
@@ -624,8 +607,7 @@ void MSP430Cpu::JN(JumpsInstruction code)
         addPC(offset << 1);
     }
 
-    cout << "address=0x"
-         << std::hex << pc << " jn $" + to_string(offset)  << endl;
+    cout << std::hex << pc << ": " << " jn $" + to_string(offset)  << endl;
 }
 
 void MSP430Cpu::JGE(JumpsInstruction code)
@@ -638,8 +620,7 @@ void MSP430Cpu::JGE(JumpsInstruction code)
         addPC(offset << 1);
     }
 
-    cout << "address=0x"
-         << std::hex << pc << " jge $" + to_string(offset)  << endl;
+    cout << std::hex << pc << ": " << " jge $" + to_string(offset)  << endl;
 }
 
 void MSP430Cpu::JL(JumpsInstruction code)
@@ -652,8 +633,7 @@ void MSP430Cpu::JL(JumpsInstruction code)
         addPC (offset << 1);
     }
 
-    cout << "address=0x"
-         << std::hex << pc << " jl $" + to_string(offset)  << endl;
+    cout <<  std::hex << pc << ": " << " jl $" + to_string(offset)  << endl;
 }
 
 void MSP430Cpu::setPC(uint16_t pc_val)
@@ -799,8 +779,7 @@ void MSP430Cpu::JMP(JumpsInstruction code)
         offset |= 0xfc00;
     }
     addPC(offset << 1);
-    cout << "address=0x"
-         << std::hex << pc << " jmp $" + to_string(offset)  << endl;
+    cout << std::hex << pc << ": " << " jmp $" + to_string(offset)  << endl;
 }
 
 void MSP430Cpu::MOV(DoubleOperandInstruction code)
@@ -965,8 +944,7 @@ void MSP430Cpu::MOV(DoubleOperandInstruction code)
         }
     }
 
-    cout << "address=0x"
-         << std::hex << pc << " " << disasm << endl;
+    cout <<  std::hex << pc << ": " << disasm << endl;
 }
 
 void MSP430Cpu::ADD(DoubleOperandInstruction code)
@@ -1046,8 +1024,7 @@ void MSP430Cpu::ADD(DoubleOperandInstruction code)
             }
         }
     }
-    cout << "address=0x"
-         << std::hex << pc << " " <<  disasm << endl;
+    cout << std::hex << pc << ": " <<  disasm << endl;
 }
 
 void MSP430Cpu::ADDC(DoubleOperandInstruction code)
@@ -1128,8 +1105,7 @@ void MSP430Cpu::ADDC(DoubleOperandInstruction code)
         }
     }
 
-    cout << "address=0x"
-         << std::hex << pc << " " << disasm << endl;
+    cout <<  std::hex << pc << ": " << disasm << endl;
 }
 
 void MSP430Cpu::SUB(DoubleOperandInstruction code)
@@ -1209,8 +1185,7 @@ void MSP430Cpu::SUB(DoubleOperandInstruction code)
             }
         }
     }
-    cout << "address=0x"
-         << std::hex << pc << " " << disasm << endl;
+    cout << std::hex << pc << ": " << disasm << endl;
 }
 
 void MSP430Cpu::SUBC(DoubleOperandInstruction code)
@@ -1291,8 +1266,7 @@ void MSP430Cpu::SUBC(DoubleOperandInstruction code)
         }
     }
 
-    cout << "address=0x"
-         << std::hex << pc << " " << disasm << endl;
+    cout << std::hex << pc << ": " << disasm << endl;
 }
 
 void MSP430Cpu::CMP(DoubleOperandInstruction code)
@@ -1368,8 +1342,7 @@ void MSP430Cpu::CMP(DoubleOperandInstruction code)
             }
         }
     }
-    cout << "address=0x"
-         << std::hex << pc <<  " " << disasm << endl;
+    cout << std::hex << pc << ": " << disasm << endl;
 }
 
 void MSP430Cpu::DADD(DoubleOperandInstruction code)
@@ -1458,8 +1431,7 @@ void MSP430Cpu::DADD(DoubleOperandInstruction code)
             }
         }
     }
-    cout << "address=0x"
-         << std::hex << pc << " " << disasm << endl;
+    cout << std::hex << pc << ": " << disasm << endl;
 }
 
 void MSP430Cpu::BIT(DoubleOperandInstruction code)
@@ -1530,8 +1502,7 @@ void MSP430Cpu::BIT(DoubleOperandInstruction code)
             }
         }
     }
-    cout << "address=0x"
-         << std::hex << pc << " " << disasm << endl;
+    cout << std::hex << pc << ": " << disasm << endl;
 }
 
 void MSP430Cpu::BIC(DoubleOperandInstruction code)
@@ -1593,8 +1564,7 @@ void MSP430Cpu::BIC(DoubleOperandInstruction code)
             }
         }
     }
-    cout << "address=0x"
-         << std::hex << pc << " " << disasm << endl;
+    cout << std::hex << pc << ": " << disasm << endl;
 }
 
 void MSP430Cpu::BIS(DoubleOperandInstruction code)
@@ -1656,8 +1626,7 @@ void MSP430Cpu::BIS(DoubleOperandInstruction code)
             }
         }
     }
-    cout << "address=0x"
-         << std::hex << pc << " " << disasm << endl;
+    cout << std::hex << pc << ": " << disasm << endl;
 }
 
 void MSP430Cpu::XOR(DoubleOperandInstruction code)
@@ -1734,8 +1703,7 @@ void MSP430Cpu::XOR(DoubleOperandInstruction code)
         }
     }
 
-    cout << "address=0x"
-         << std::hex << pc << " " << disasm << endl;
+    cout << std::hex << pc << ": " << disasm << endl;
 }
 
 void MSP430Cpu::AND(DoubleOperandInstruction code)
@@ -1811,8 +1779,7 @@ void MSP430Cpu::AND(DoubleOperandInstruction code)
         }
     }
 
-    cout << "address=0x"
-         << std::hex << pc <<  " " << disasm << endl;
+    cout << std::hex << pc << ": " << disasm << endl;
 }
 
 void MSP430Cpu::setStepRun(bool stepRun)

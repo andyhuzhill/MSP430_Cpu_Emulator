@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 {
     MSP430Cpu cpu;
 
-    //  cpu.setStepRun(true);
+//    cpu.setStepRun(true);
 
     ifstream rom_file;
     rom_file.open(argv[1], ifstream::in);

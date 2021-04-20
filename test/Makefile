@@ -1,5 +1,6 @@
 AS=msp430-as
 GCC=msp430-gcc
+GXX=msp430-g++
 OBJCOPY=msp430-objcopy
 OBJDUMP=msp430-objdump
 CP=cp
@@ -12,12 +13,14 @@ all:
 	$(CP) test.bin ..
 
 c430:
-	mv test.c430 test.c
-	$(GCC) -std=c99 -mmcu=msp430g2553 -o test.elf test.c
-	mv test.c test.c430
+	$(GCC) -std=c99 -mcpu=430 -mmcu=msp430g2553 -nostartfiles -lm -o test.elf test.c
 	$(OBJCOPY) -I elf32-msp430 test.elf -O binary test.bin
-	$(OBJDUMP) -d test.elf > test.s
+	$(OBJDUMP) -D test.elf > test.s
 	$(CP) test.bin ..
+
+
+cpp:
+	$(GXX) -std=c++0x -mmcu=msp430g2553 -nostartfiles -o  test.elf  test.cpp
 	
 clean:
 	$(RM) -rf *.elf *.bin *.s

@@ -44,6 +44,7 @@ typedef struct {
     uint8_t C : 1;
 #endif
 } StatusRegister;
+static_assert (sizeof(StatusRegister) == 2, "Status Register Size error!");
 
 typedef struct {
 #ifdef __ORDER_LITTLE_ENDIAN__
@@ -62,6 +63,7 @@ typedef struct {
     uint8_t d_reg : 4;
 #endif
 } DoubleOperandInstruction;
+static_assert (sizeof(DoubleOperandInstruction) == 2, "Double Operander Instruction Size error!");
 
 typedef struct {
 #ifdef __ORDER_LITTLE_ENDIAN__
@@ -76,6 +78,7 @@ typedef struct {
     uint8_t s_d_reg : 4;
 #endif
 } SingleOperandInstruction;
+static_assert (sizeof(SingleOperandInstruction) == 2, "Single Operand Instruction Size error!");
 
 typedef struct {
 #ifdef __ORDER_LITTLE_ENDIAN__
@@ -86,6 +89,7 @@ typedef struct {
     uint16_t offset : 10;
 #endif
 } JumpsInstruction;
+static_assert (sizeof(JumpsInstruction) == 2, "Jump Instruction Size error!");
 
 #pragma packed(pop)
 
@@ -93,7 +97,7 @@ class MSP430Cpu
 {
 public:
     MSP430Cpu();
-    virtual ~MSP430Cpu() = default;
+    ~MSP430Cpu() = default;
 
     void loadProgram(const char *const rom_data, long data_size);
 
@@ -101,7 +105,7 @@ public:
 
     uint16_t loadNextInstruction();
 
-    void translateCode(uint16_t code);
+    void executeCode(uint16_t code);
 
     void printRegister(void);
 
@@ -127,7 +131,7 @@ private:
     uint16_t &r14 = reg[14];
     uint16_t &r15 = reg[15];
 
-    shared_ptr<uint8_t> m_ram;
+    unique_ptr<uint8_t[]> m_ram;
     const char *m_rom {};
     long program_size {};
     bool step_run{};
